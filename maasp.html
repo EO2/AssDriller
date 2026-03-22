@@ -75,8 +75,8 @@
         <h1>MAASP Calculator</h1>
         <form id="maaspForm">
             <div class="form-group">
-                <label>Casing Burst Pressure Rating (psi):</label>
-                <input type="number" id="burstPressure" placeholder="e.g., 3000" required>
+                <label>Casing Burst Pressure Rating (bar):</label>
+                <input type="number" id="burstPressure" placeholder="e.g., 200" required>
             </div>
             <div class="form-group">
                 <label>Safety Factor (%):</label>
@@ -87,7 +87,7 @@
         
         <div id="result" class="result">
             <p><strong>Maximum Allowable Annular Surface Pressure:</strong></p>
-            <div class="result-value" id="resultValue">0 psi</div>
+            <div class="result-value" id="resultValue">0 bar</div>
         </div>
     </div>
 
@@ -103,7 +103,7 @@
 
             const maasp = burstPressure * (1 - safetyFactor / 100);
             
-            document.getElementById('resultValue').textContent = maasp.toFixed(2) + ' psi';
+            document.getElementById('resultValue').textContent = maasp.toFixed(2) + ' bar';
             document.getElementById('result').classList.add('show');
         }
 
