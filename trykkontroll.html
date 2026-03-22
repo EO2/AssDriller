@@ -94,23 +94,24 @@
 <body>
     <div class="container">
         <h1>Well Pressure Control Calculator</h1>
+        <p style="margin-bottom: 20px; color: #666;">Leave one field empty to calculate it.</p>
         
         <form class="input-section">
             <div class="input-group">
                 <label for="pressure">Pressure (bar):</label>
-                <input type="number" id="pressure" placeholder="e.g., 100" step="0.1">
+                <input type="number" id="pressure" placeholder="Leave empty to calculate" step="0.1">
             </div>
             <div class="input-group">
                 <label for="tvd">TVD - Depth (m):</label>
-                <input type="number" id="tvd" placeholder="e.g., 1000" step="0.1">
+                <input type="number" id="tvd" placeholder="Leave empty to calculate" step="0.1">
             </div>
             <div class="input-group">
                 <label for="sg">SG - Specific Gravity:</label>
-                <input type="number" id="sg" placeholder="e.g., 1.2" step="0.01">
+                <input type="number" id="sg" placeholder="Leave empty to calculate" step="0.01">
             </div>
             <div class="input-group">
-                <label for="rho">ρ - Gravity Constant (m/s²):</label>
-                <input type="number" id="rho" placeholder="e.g., 9.81" step="0.01" value="9.81">
+                <label for="g">g - Gravity Constant (bar·m⁻¹/(SG·m)):</label>
+                <input type="number" id="g" placeholder="e.g., 0.0981" step="0.0001" value="0.0981">
             </div>
             <button type="button" onclick="calculate()">Calculate</button>
         </form>
@@ -126,40 +127,72 @@
         let chart = null;
 
         function calculate() {
-            const pressure = parseFloat(document.getElementById('pressure').value);
-            const tvd = parseFloat(document.getElementById('tvd').value);
-            const sg = parseFloat(document.getElementById('sg').value);
-            const rho = parseFloat(document.getElementById('rho').value);
+            const pressure = document.getElementById('pressure').value ? parseFloat(document.getElementById('pressure').value) : null;
+            const tvd = document.getElementById('tvd').value ? parseFloat(document.getElementById('tvd').value) : null;
+            const sg = document.getElementById('sg').value ? parseFloat(document.getElementById('sg').value) : null;
+            const g = parseFloat(document.getElementById('g').value);
 
-            if (!pressure || !tvd || !sg || !rho) {
-                alert('Please fill in all fields');
+            const emptyCount = [pressure, tvd, sg].filter(v => v === null).length;
+            
+            if (emptyCount > 1) {
+                alert('Please leave only one field empty');
+                return;
+            }
+            if (emptyCount === 0) {
+                alert('Please leave one field empty to calculate it');
                 return;
             }
 
-            // Calculate weights for different mud columns
-            const weights = generateWeightColumns(pressure, tvd, sg, rho);
-            displayResults(weights);
+            let calculated = {};
+            
+            // Calculate missing value: P = SG * g * TVD
+            if (pressure === null) {
+                calculated.pressure = (sg * g * tvd).toFixed(2);
+                calculated.label = 'Calculated Pressure';
+                document.getElementById('pressure').value = calculated.pressure;
+            } else if (tvd === null) {
+                calculated.tvd = (pressure / (sg * g)).toFixed(2);
+                calculated.label = 'Calculated TVD';
+                document.getElementById('tvd').value = calculated.tvd;
+            } else if (sg === null) {
+                calculated.sg = (pressure / (g * tvd)).toFixed(2);
+                calculated.label = 'Calculated SG';
+                document.getElementById('sg').value = calculated.sg;
+            }
+
+            const weights = generateWeightColumns(pressure || calculated.pressure, tvd || calculated.tvd, sg || calculated.sg, g);
+            displayResults(weights, calculated);
             updateChart(weights);
         }
 
-        function generateWeightColumns(pressure, tvd, sg, rho) {
+        function generateWeightColumns(pressure, tvd, sg, g) {
             const weights = [];
             for (let i = 0; i < 5; i++) {
-                const mudWeight = sg + (i * 0.1);
-                const hydrostatic = (mudWeight * rho * tvd) / 100000; // convert to bar
+                const mudWeight = parseFloat(sg) + (i * 0.1);
+                const hydrostatic = (mudWeight * g * tvd).toFixed(2);
                 weights.push({
                     column: i + 1,
                     mudWeight: mudWeight.toFixed(2),
-                    hydrostatic: hydrostatic.toFixed(2),
-                    margin: (pressure - hydrostatic).toFixed(2)
+                    hydrostatic: hydrostatic,
+                    margin: (pressure - parseFloat(hydrostatic)).toFixed(2)
                 });
             }
             return weights;
         }
 
-        function displayResults(weights) {
+        function displayResults(weights, calculated) {
             const resultsDiv = document.getElementById('results');
             resultsDiv.innerHTML = '';
+            
+            if (Object.keys(calculated).length > 0) {
+                const html = `
+                    <div class="result-box" style="border-left-color: #28a745;">
+                        <h3>${calculated.label}</h3>
+                        <p class="value">${calculated.pressure || calculated.tvd || calculated.sg}</p>
+                    </div>
+                `;
+                resultsDiv.innerHTML += html;
+            }
             
             weights.forEach(w => {
                 const html = `
